@@ -1,0 +1,115 @@
+# NODE-A
+
+### kill everything
+
+sudo kill -SIGINT $(pidof kube-apiserver kubelet etcd flanneld)
+
+
+### etcd
+
+sudo rm -rf /var/lib/etcd
+
+rm -rf ~/default.etcd/
+
+etcd
+
+
+### etcd with flanneld
+
+etcd --listen-client-urls 'http://0.0.0.0:2379' \
+--advertise-client-urls 'http://192.168.225.232:2379'
+
+
+### api-server
+
+sudo $HOME/k8s/_output/bin/kube-apiserver \
+--etcd-servers=http://localhost:2379 \
+--allow-privileged=true \
+--service-cluster-ip-range=10.0.0.0/16 \
+--insecure-bind-address=0.0.0.0  \
+--disable-admission-plugins=ServiceAccount
+
+
+### kubelet nodea
+
+sudo rm -rf /var/lib/kubelet
+
+sudo $HOME/k8s/_output/bin/kubelet \
+--kubeconfig=nodea.conf \
+--config=nodea.yaml \
+--allow-privileged=true \
+--runtime-cgroups=/systemd/machine.slice \
+--kubelet-cgroups=/systemd/machine.slice \
+--pod-infra-container-image=k8s.gcr.io/pause:3.1
+
+
+### kube proxy nodea
+
+sudo $HOME/k8s/_output/bin/kube-proxy --config=kube-proxy-config
+
+
+### controller manager
+
+$HOME/k8s/_output/bin/kube-controller-manager --kubeconfig=nodea.conf
+
+
+### scheduler
+
+$HOME/k8s/_output/bin/kube-scheduler --kubeconfig=nodea.conf
+
+
+### reset kubectl
+
+rm $HOME/.kube/config
+
+
+### flanneld
+
+etcdctl set /coreos.com/network/config '{"Network":"10.1.0.0/16"}'
+
+sudo ./dist/flanneld --etcd-endpoints=http://localhost:2379
+
+
+### CoreDNS
+
+#### configMap - edit the endopoint property and then deploy
+
+curl https://s3-us-east-2.amazonaws.com/rx-m-kubernetes/coredns-cm.yaml -o coredns-cm.yaml
+kubectl create -f coredns-cm.yaml
+
+
+#### Deployment
+
+kubectl apply -f https://s3.us-east-2.amazonaws.com/rx-m-kubernetes/coredns-dep.yaml
+
+
+#### Service
+
+kubectl apply -f https://s3.us-east-2.amazonaws.com/rx-m-kubernetes/coredns-svc.yaml
+
+
+--------------------------------------------------------------------------------------
+# NODE-B
+
+
+### kubelet nodeb
+
+sudo rm -rf /var/lib/kubelet
+
+sudo $HOME/kube-bin/kubelet \
+--kubeconfig=nodeb.conf \
+--config=nodeb.yaml \
+--allow-privileged=true \
+--runtime-cgroups=/systemd/machine.slice \
+--kubelet-cgroups=/systemd/machine.slice \
+--pod-infra-container-image=k8s.gcr.io/pause:3.1
+
+
+### kube-proxy nodeb
+
+sudo $HOME/kube-bin/kube-proxy --config=kube-proxy-config
+
+
+### flanneld
+
+sudo ./dist/flanneld --etcd-endpoints=http://nodea:2379
