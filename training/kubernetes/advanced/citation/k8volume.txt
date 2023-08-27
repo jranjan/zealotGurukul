@@ -1,0 +1,81 @@
+======================================================================================================================
+Kubernete volume
+======================================================================================================================
+
+
+----------------------------------------------------------------------------------------------------------------------
+Type				   	|	Persists pod death	|  Writer-reader map	 |  pre-creation  | Remarks, if any
+----------------------------------------------------------------------------------------------------------------------
+emptyDir			   	|	No					|  1-1					 |	No		      | No limit on space consumption
+----------------------------------------------------------------------------------------------------------------------
+hostPath			   	|	No					|  1-1					 |	No			  | No limit on space consumption
+----------------------------------------------------------------------------------------------------------------------
+gcePeristentDisk    	|	Yes					|  1-n					 |  Yes			  | apply to GCE only
+----------------------------------------------------------------------------------------------------------------------
+awsElasticBlockStore	|	Yes					|  1-n			      	 |	Yes			  | apply to AWS only
+----------------------------------------------------------------------------------------------------------------------
+nfs						|	Yes					|  N-n			      	 |	Yes			  | 
+----------------------------------------------------------------------------------------------------------------------
+iSCSI					|	Yes					|  1-n			      	 |	Yes			  | 
+----------------------------------------------------------------------------------------------------------------------
+flocker					|	Yes					|  ?-n			      	 |	Yes			  | Auto-attach on migration
+----------------------------------------------------------------------------------------------------------------------
+glusterfs				|	Yes					|  N-n			      	 |	Yes			  | 
+----------------------------------------------------------------------------------------------------------------------
+rbd						|	Yes					|  1-n			      	 |	Yes			  | 
+----------------------------------------------------------------------------------------------------------------------
+cephfs					|	Yes					|  N-n			      	 |	Yes			  | 
+----------------------------------------------------------------------------------------------------------------------
+gitrepo					|	Yes					|  ?-?			      	 |	No			  | Clones repo
+----------------------------------------------------------------------------------------------------------------------
+secret					|	Yes					|  Read only	      	 |	Yes			  | Create secret and then share
+----------------------------------------------------------------------------------------------------------------------
+FlexVolume				|	Yes					|  ?			      	 |	Yes			  | Alpha feature
+----------------------------------------------------------------------------------------------------------------------
+persistentVolumeClaim	|	Yes					|  ?			      	 |	?			  | Used to calim iSCI or GCE volume
+----------------------------------------------------------------------------------------------------------------------
+AzureFileVolume			|	Yes					|  ?			      	 |	?			  | 
+----------------------------------------------------------------------------------------------------------------------
+AzureDiskVolume			|	Yes					|  ?			      	 |	?			  | 
+----------------------------------------------------------------------------------------------------------------------
+vsphereVolume			|	Yes					|  ?			      	 |	Yes			  | VMDK/VSAN supported
+----------------------------------------------------------------------------------------------------------------------
+Quobyte					|	Yes					|  ?			      	 |	Yes			  | 
+----------------------------------------------------------------------------------------------------------------------
+AzureDiskVolume			|	Yes					|  ?			      	 |	?			  | 
+----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+======================================================================================================================
+Design/architecture storage's questions for kubernete world?
+======================================================================================================================
+
+You will find reference of data and volume. The 'data' applies to all types of storage: file, volume and object. 
+It is specifically mentioned wherever the aspect applies to only subset of file, volume or object.
+
+1. [Persistent data] Is persistent storage needed? What is definition of persistent?
+		- Do we need to persist data across container in pod stop/start cycle?
+		- Do we need to persist if container in pod dies?
+		- Do we need to persist if pod dies?
+		- Do we need to persist if pod migrates from one node to another?
+2. [Share data] Do we need to in same cluster? What is definition of sharing?
+		- Do we need to share data across containers of same pod?
+		- Do we need to share data across across containers of different pod but on same node?
+		- Do we need to share data across across containers of different pod but on different node?
+		- Can volume or data ned to be shared with multiple writers running across pod? Or, one write and multiple write is OK?
+3. [Federated data] Do we need to share across different cluster? What is definition of sharing?
+		- Do we need to share data across different cluster of same zone?
+		- Do we need to share data across different cluster of different zone?
+		- Do we need to share data across different cluster of same region?
+		- Do we need to share data across different cluster of different region?		
+4. [Federated volume and file] It is different from object storage using REST. So, ask yourself:
+		- Do we need to share same volume across clusters? Or, is it fine to have different volume but replicated?
+		- Do we need to share same volume by different cluster at same time? Or, it is fail-over (active-passive) usage?
+5. [Multiplicity and scalability]		
+		 

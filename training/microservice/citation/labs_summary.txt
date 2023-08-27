@@ -1,0 +1,232 @@
+The objective of this document is to capture all learning which one gets typically of hands on instead of conceptual understanding of 
+the subject only. 
+
+1) How did I prepare my development setup?
+2) How did I packaged my webapp as a container and launched it after that?  
+
+
+
+
+
+
+=========================================================================================================================================
+How did I prepare my development setup?
+=========================================================================================================================================
+
+Steps followed:
+
+  - Created development infrastructure (EC2 instance)
+  - Prepared OS (update)
+  - Installed tools (installing packages: pip, flask, git
+  - Created developer centeric development environment (i.e. venv)
+  - Create repository for version control (git init does that :-))
+  - Created microservice (simple python program using flask)
+  - Deployed and validated its functioning
+  
+ For some steps, the details are given which can be pretty handy for any development environment.
+ 
+ 
+ 
+ 
+----------------------------------------------------------------------
+Created developer centeric development environment (i.e. venv)
+----------------------------------------------------------------------
+  
+user@ubuntu:~/trash-can/inv$ virtualenv venv
+
+user@ubuntu:~/trash-can/inv$ ls -laF
+total 12
+drwxrwxr-x 3 user user 4096 Jan 7 03:08 ./
+drwxrwxr-x 3 user user 4096 Jan 7 03:04 ../
+drwxrwxr-x 6 user user 4096 Jan 7 03:08 venv/
+
+user@ubuntu:~/trash-can/inv$ ls -lF venv/
+total 12
+drwxrwxr-x 2 user user 4096 Mar 20 08:30 bin/
+drwxrwxr-x 2 user user 4096 Mar 20 08:30 include/
+drwxrwxr-x 3 user user 4096 Mar 20 08:30 lib/
+
+user@ubuntu:~/trash-can/inv$ source venv/bin/activate ------------------------ activates the environment with its own set of python interpreter
+
+(venv) user@ubuntu:~/trash-can/inv$ python --version
+Python 3.5.2
+
+(venv) user@ubuntu:~/trash-can/inv$ which python
+/home/user/trash-can/inv/venv/bin/python
+
+# (venv) user@ubuntu:~/trash-can/inv$ deactivate ----------------------------------- to deactivate venv
+
+
+----------------------------------------------------------------------
+Create repository for version control (git init does that :-))
+----------------------------------------------------------------------
+
+For this project we'll use the Git source code control system to ensure that we do not accidentally delete or overwrite our work. 
+To begin we'll use the git init command to create a repository for our code:
+
+(venv) user@ubuntu:~/trash-can/inv$ git init
+Initialized empty Git repository in /home/user/trash-can/inv/.git/
+
+(venv) ubuntu@ip-172-31-39-201:~/trash-can/inv$ git branch -a
+* master
+
+(venv) user@ubuntu:~/trash-can/inv$ git status
+On branch master
+Initial commit
+Untracked files:
+(use "git add <file>..." to include in what will be committed)
+__pycache__/
+inv.py
+venv/
+nothing added to commit but untracked files present (use "git add" to track)
+
+Adding *.pyc to the .gitignore caused git to no longer show .pyc files in its statistics. This did add the .gitignore file itself to the
+list of unchecked in files. Because we don't want to lose this file we should commit it.
+Now add the venv/ directory to the ignore list:
+
+(venv) user@ubuntu:~/trash-can/inv$ echo "venv/" >> .gitignore
+
+(venv) user@ubuntu:~/trash-can/inv$
+
+(venv) user@ubuntu:~/trash-can/inv$ git status
+On branch master
+Initial commit
+Untracked files:
+(use "git add <file>..." to include in what will be committed)
+.gitignore
+inv.py
+nothing added to commit but untracked files present (use "git add" to track)
+
+(venv) user@ubuntu:~/trash-can/inv$
+Now git status shows us only the files that we want to commit to revision control, the Python source code and our .gitignore .
+Git allows you to stage a set of files to be committed at once. Stage the .gitignore and the .py file:
+
+(venv) user@ubuntu:~/trash-can/inv$ git add .gitignore
+
+(venv) user@ubuntu:~/trash-can/inv$ git status
+On branch master
+Initial commit
+Changes to be committed:
+(use "git rm --cached <file>..." to unstage)
+new file: .gitignore
+Untracked files:
+(use "git add <file>..." to include in what will be committed)
+inv.py
+(venv) user@ubuntu:~/trash-can/inv$
+
+
+
+=========================================================================================================================================
+How did I packaged my webapp as a container and launched it after that?  
+=========================================================================================================================================
+
+I was using venv for development isolation which is file centric isolation. It was good so far! But I want run time isolation and 
+want to give a hardened artefact to someone. That is what container image is all about.
+
+Steps::
+
+	- Install docker
+	- Create docker file
+	- Build docker image with tag (if you want - ideally you should as it does help in versioning)
+	- Run container
+	- Checked-in my docker file into repo
+	
+Learnings::
+
+	Learn to have patience to debug if thing does not work. Always ask: where the log is!!!
+	In this case, docker log command clearly hinted that.
+	
+Commands::
+
+user@ubuntu:~$ wget -qO- https://get.docker.com/ | sh
+
+user@ubuntu:~$ sudo usermod -a -G docker user
+
+user@ubuntu:~$ id user
+uid=1000(user) gid=1000(user) groups=1000(user),4(adm),24(cdrom),27(sudo),
+30(dip),46(plugdev),110(lxd),115(lpadmin),116(sambashare),999(docker)
+
+user@ubuntu:~$ id
+uid=1000(user) gid=1000(user) groups=1000(user),4(adm),24(cdrom),27(sudo),
+30(dip),46(plugdev),110(lxd), 115(lpadmin),116(sambashare)
+
+user@ubuntu:~$ sudo reboot
+
+user@ubuntu:~$ cd trash-can/
+
+user@ubuntu:~/trash-can/inv$ vim Dockerfile
+
+user@ubuntu:~/trash-can/inv$ cat Dockerfile
+
+FROM ubuntu:16.04
+RUN apt-get update -y && \
+    apt-get install -y python-pip && \
+    pip install flask && \
+    rm -rf /var/lib/apt/lists/*
+ENV FLASK_APP=inv.py    
+COPY . /app
+WORKDIR /app
+ENTRYPOINT ["python"]
+CMD ["-m", "flask", "run", "-h", "0.0.0.0", "-p", "8080"]
+EXPOSE 8080
+
+user@ubuntu:~/trash-can/inv$ vim .dockerignore
+
+user@ubuntu:~/trash-can/inv$ cat .dockerignore
+
+venv/
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+*.pyc
+
+user@ubuntu:~/trash-can/inv$ docker build -t trash-can/inv:0.1 ~/trash-can/inv/
+
+user@ubuntu:~/trash-can/inv$ docker image ls
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+trash-can/inv       0.1                 882b420bbbb7        2 minutes ago       404MB
+ubuntu              16.04               2d696327ab2e        3 weeks ago         122MB
+rxmllc/hello        latest              05a3bd381fc2        3 weeks ago         1.84kB
+user@ubuntu:~/trash-can/inv$
+
+user@ubuntu:~/trash-can/inv$ docker container run --name=inv -d -p=8080:8080 trash-can/inv:0.1
+e35619c100b08948d4c75b9977fe56de8f3fe21f5f6605c322a28b95231ae950
+
+user@ubuntu:~/trash-can/inv$ docker container logs inv
+
+user@ubuntu:~/trash-can/inv$ curl -svv http://localhost:8080/
+
+user@ubuntu:~/trash-can/inv$ docker container rm $(docker container stop $(docker container ls -aq))
+e35619c100b0
+2eb632068254
+
+user@ubuntu:~/trash-can/inv$ git status
+
+user@ubuntu:~/trash-can/inv$ git add .dockerignore
+
+user@ubuntu:~/trash-can/inv$ git add Dockerfile
+
+user@ubuntu:~/trash-can/inv$ git commit -m "Dockerfile and .dockerignore for trash can inventory service"
+
+[master 5240d6f] Dockerfile and .dockerignore for trash can inventory service
+ 2 files changed, 18 insertions(+)
+ create mode 100644 .dockerignore
+ create mode 100644 Dockerfile
+
+user@ubuntu:~/trash-can/inv$ git status
+
+
+
+
+
+
+
+
+=========================================================================================================================================
+References
+=========================================================================================================================================
+
+Git repo creation:
+https://www.atlassian.com/git/tutorials/setting-up-a-repository/git-init
